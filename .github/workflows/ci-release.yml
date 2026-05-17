@@ -49,6 +49,8 @@ jobs:
     needs: ci                                 # Blocks release if the build, lint, or test steps fail
     if: startsWith(github.ref, 'refs/tags/v') # Strictly limits execution to tag pushes
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
