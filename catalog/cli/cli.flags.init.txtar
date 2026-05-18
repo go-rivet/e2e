@@ -1,0 +1,20 @@
+# Test: init
+rivet --init
+exists Taskfile.yml
+stdout 'Taskfile created: Taskfile.yml'
+filecontains Taskfile.yml expect
+rivet
+stdout 'Hello, world!'
+
+-- expect --
+version: '3'
+
+vars:
+  GREETING: Hello, world!
+
+tasks:
+  default:
+    desc: Print a greeting message
+    cmds:
+      - echo "{{.GREETING}}"
+    silent: true

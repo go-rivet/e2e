@@ -1,6 +1,7 @@
 # Variables
-BINARY_NAME=e2e
+BINARY_NAME=re2e
 SRC_DIR=./cmd/e2e
+SRCS := $(shell find ./ -name '*.go')
 BUILD_DIR=bin
 DIST_DIR     = dist
 MODULE_PATH = github.com/go-rivet/e2e/internal/version
@@ -39,7 +40,8 @@ endif
 all: help
 
 ## build: Build the binary for the current OS/Architecture
-build:
+build: $(BUILD_DIR)/$(BINARY_NAME)
+$(BUILD_DIR)/$(BINARY_NAME): $(SRCS)
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
 	CGO_ENABLED=0 go build \
@@ -49,6 +51,13 @@ build:
 		-o $(BUILD_DIR)/$(BINARY_NAME) $(SRC_DIR)
 	@chmod +x $(BUILD_DIR)/$(BINARY_NAME)
 	@echo "Binary built at $(BUILD_DIR)/$(BINARY_NAME)"
+
+## install: Install the binary to the standard user Go bin directory
+install: build
+	@echo "Installing $(BINARY_NAME) to $(GOBIN)..."
+	@mkdir -p $(GOBIN)
+	@cp $(BUILD_DIR)/$(BINARY_NAME) $(GOBIN)/$(BINARY_NAME)
+	@echo "Installation successful."
 
 ## run: Build and run the local binary immediately
 run: build
@@ -77,13 +86,6 @@ mod:
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf $(DIST_DIR)
-
-## install: Install the binary to the standard user Go bin directory
-install: build
-	@echo "Installing $(BINARY_NAME) to $(GOBIN)..."
-	@mkdir -p $(GOBIN)
-	@cp $(BUILD_DIR)/$(BINARY_NAME) $(GOBIN)/$(BINARY_NAME)
-	@echo "Installation successful."
 
 ## help: Show this help screen
 help:

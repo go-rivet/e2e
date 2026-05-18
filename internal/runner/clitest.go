@@ -2,42 +2,100 @@ package runner
 
 import (
 	"fmt"
-	"os"
+	"runtime"
+	"sync"
 
 	"github.com/rogpeppe/go-internal/testscript"
 )
 
 type cliTest struct {
-	failed bool
+	mu      sync.Mutex
+	failed  bool
+	skipped bool
+	isSub   bool
+	parent  *cliTest
 }
 
-func (c *cliTest) Fatal(args ...any) {
-	c.failed = true
-	_, _ = fmt.Fprint(os.Stderr, "❌ ")
-	_, _ = fmt.Fprintln(os.Stderr, args...)
+func (t *cliTest) Run(name string, f func(t testscript.T)) {
+	subTest := &cliTest{
+		isSub:  true,
+		parent: t,
+	}
+
+	fmt.Printf("Running: %s\n", name)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		f(subTest)
+	}()
+	<-done
+
+	if subTest.failed {
+		t.mu.Lock()
+		t.failed = true
+		t.mu.Unlock()
+	}
 }
 
-func (c *cliTest) Log(args ...any) {
-	_, _ = fmt.Fprintln(os.Stdout, args...)
+func (t *cliTest) Fatal(args ...interface{}) {
+	t.mu.Lock()
+	t.failed = true
+	t.mu.Unlock()
+	fmt.Printf("🚨 Fatal error: %s\n", fmt.Sprint(args...))
+	if t.isSub {
+		runtime.Goexit()
+	}
 }
 
-func (c *cliTest) FailNow() {
-	c.failed = true
+func (t *cliTest) Log(args ...interface{}) {
+	if t.skipped {
+		fmt.Println()
+	} else {
+		fmt.Println(args...)
+	}
 }
 
-func (c *cliTest) Skip(args ...any) {
-	_, _ = fmt.Fprint(os.Stdout, "⏭️ Skipped: ")
-	_, _ = fmt.Fprintln(os.Stdout, args...)
+func (t *cliTest) Logf(format string, args ...interface{}) {
+	if t.skipped {
+		fmt.Println()
+	} else {
+		fmt.Printf(format+"\n", args...)
+	}
 }
 
-func (c *cliTest) Parallel() {
-	// No-op for CLI runner sequential runs
+func (t *cliTest) Skip(args ...interface{}) {
+	t.skipped = true
+	fmt.Printf("⚠️  Skipped: %s\n", fmt.Sprint(args...))
+	if t.isSub {
+		runtime.Goexit()
+	}
 }
 
-func (c *cliTest) Verbose() bool {
-	return true
+func (t *cliTest) Skipf(format string, args ...interface{}) {
+	t.skipped = true
+	fmt.Printf("⚠️  Skipped: %s\n", fmt.Sprintf(format, args...))
+	if t.isSub {
+		runtime.Goexit()
+	}
 }
 
-func (c *cliTest) Run(name string, f func(testscript.T)) {
-	f(c)
+func (t *cliTest) Errorf(format string, args ...interface{}) {
+	t.mu.Lock()
+	t.failed = true
+	t.mu.Unlock()
+	fmt.Printf("❌ "+format+"\n", args...)
 }
+
+func (t *cliTest) FailNow() {
+	t.mu.Lock()
+	t.failed = true
+	t.mu.Unlock()
+	if t.isSub {
+		runtime.Goexit()
+	}
+}
+
+func (t *cliTest) Parallel()     {}
+func (t *cliTest) Helper()       {}
+func (t *cliTest) Verbose() bool { return false }

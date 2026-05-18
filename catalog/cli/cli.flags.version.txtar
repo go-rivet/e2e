@@ -1,0 +1,5 @@
+# Test: version
+rivet --version
+stdout 'Rivet:  v'
+stdout 'Commit: '
+stdout 'Built:  '
