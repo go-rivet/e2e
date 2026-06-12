@@ -1,0 +1,60 @@
+# Test: verbose 0
+rivet
+cmp stdout stdout.txt
+! stderr .
+
+# Test: verbose 1
+rivet -v
+cmp stdout stdout.txt
+cmp stderr stderr-verbose-info.txt
+
+# Test: verbose 2
+rivet -vv
+cmp stdout stdout.txt
+cmp stderr stderr-verbose-debug.txt
+
+# Test: verbose 3
+rivet -vvv
+cmp stdout stdout.txt
+cmp stderr stderr-verbose-trace.txt
+
+# Test: verbose info
+rivet --verbose info
+cmp stdout stdout.txt
+cmp stderr stderr-verbose-info.txt
+
+# Test: verbose debug
+rivet --verbose debug
+cmp stdout stdout.txt
+cmp stderr stderr-verbose-debug.txt
+
+# Test: verbose trace
+rivet --verbose trace
+cmp stdout stdout.txt
+cmp stderr stderr-verbose-trace.txt
+
+
+-- Taskfile.yml --
+version: '3'
+
+tasks:
+  default:
+    desc: Print a greeting message
+    cmds:
+      - echo "Hello World."
+
+
+
+
+-- stdout.txt --
+Hello World.
+-- stderr-verbose-info.txt --
+task: [default] echo "Hello World."
+-- stderr-verbose-debug.txt --
+task: "default" started
+task: [default] echo "Hello World."
+task: "default" finished
+-- stderr-verbose-trace.txt --
+task: "default" started
+task: [default] echo "Hello World."
+task: "default" finished

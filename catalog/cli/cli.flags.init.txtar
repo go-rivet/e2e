@@ -1,8 +1,18 @@
 # Test: init
 rivet --init
+stdout ''
+stderr ''
 exists Taskfile.yml
-stdout 'Taskfile created: Taskfile.yml'
 filecontains Taskfile.yml expect
+rivet
+stdout 'Hello, world!'
+
+# Test: init w. verbose and filename
+rivet -v --init foobar.yml
+stdout ''
+stderr 'Taskfile created: foobar.yml'
+exists foobar.yml
+filecontains foobar.yml expect
 rivet
 stdout 'Hello, world!'
 
