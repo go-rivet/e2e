@@ -1,0 +1,82 @@
+
+# Test: exact match 
+rivet
+exists file_1.text
+exists file_exact.out
+exists .task
+stdout 'Task default runs'
+stdout '-> file_1.text'
+! stdout '-> file_1.txt'
+ 
+# Test: no change, no run
+rivet
+exists file_1.text
+exists file_exact.out
+exists .task
+stdout ''
+
+# Test: update match, run
+touch file_1.text
+rivet
+exists file_1.text
+exists file_exact.out
+exists .task
+stdout 'Task default runs'
+stdout '-> file_1.text'
+! stdout '-> file_1.txt'
+
+# Test: delete yield, run
+rm file_exact.out
+! exists file_exact.out
+rivet
+exists file_1.text
+exists file_exact.out
+exists .task
+stdout 'Task default runs'
+stdout '-> file_1.text'
+! stdout '-> file_1.txt'
+
+# Test: delete .task, run
+rm .task
+rivet
+exists file_1.text
+exists file_exact.out
+exists .task
+stdout 'Task default runs'
+stdout '-> file_1.text'
+! stdout '-> file_1.txt'
+
+ # Test: delete match, error
+ # enable when newSourceReadDirProvider reactivates ErrNoSourcesMatched
+ # rm file_1.text
+ # rm file_exact.out
+ # ! exists file_1.text
+ # ! exists file_exact.out
+ # rivet
+ # ! exists file_1.text
+ # ! exists file_exact.out
+ # exists .task
+ # stdout ''
+ # stderr ''
+
+
+-- Taskfile.yml --
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - echo "Task {{.TASK}} runs"
+      - for: sources
+        cmd: echo "-> {{.ITEM}}"
+      - touch file_exact.out
+    transforms:
+      - matches:
+          - file_1.text 
+        yields:
+          - file_exact.out
+
+-- file_1.txt --
+-- file_1.text --
+-- sub/file_1.txt --
+-- sub/dir/file_1.txt --

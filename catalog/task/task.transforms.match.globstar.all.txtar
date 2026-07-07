@@ -1,0 +1,52 @@
+
+# Test: globstarall match 
+rivet globstarall
+exists file_globstarall.out
+exists .task
+stdout 'Task globstarall runs'
+stdout '-> file_1.txt'
+stdout '-> foo_2.bar'
+stdout '-> sub/file_3.txt'
+stdout '-> sub/foo_4.bar'
+stdout '-> sub/dir/file_5.txt'
+ 
+# Test: no change, no run
+rivet globstarall
+exists file_globstarall.out
+exists .task
+stdout ''
+
+# Test: update match, run
+touch sub/dir/file_5
+rivet globstarall
+exists file_globstarall.out
+exists .task
+stdout 'Task globstarall runs'
+stdout '-> file_1.txt'
+stdout '-> foo_2.bar'
+stdout '-> sub/file_3.txt'
+stdout '-> sub/foo_4.bar'
+stdout '-> sub/dir/file_5.txt'
+
+
+-- Taskfile.yml --
+version: '3'
+
+tasks:
+  globstarall:
+    cmds:
+      - echo "Task {{.TASK}} runs"
+      - for: sources
+        cmd: echo "-> {{.ITEM}}"
+      - touch file_{{.TASK}}.out
+    transforms:
+      - matches:
+          - ./**/*
+        yields:
+          - file_{{.TASK}}.out
+
+-- file_1.txt --
+-- foo_2.bar --
+-- sub/file_3.txt --
+-- sub/foo_4.bar --
+-- sub/dir/file_5.txt --

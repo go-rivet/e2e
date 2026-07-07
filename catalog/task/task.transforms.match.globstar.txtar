@@ -1,0 +1,64 @@
+
+# Test: globstar match 
+rivet globstar
+exists file_globstar.out
+exists .task
+stdout 'Task globstar runs'
+stdout '-> file_1.txt'
+stdout '-> file_2.txt'
+stdout '-> sub/file_3'
+stdout '-> sub/dir/file_4'
+stdout '-> sub/dir/file_5'
+! stdout '-> foo_1.bar'
+ 
+# Test: no change, no run
+rivet globstar
+exists file_globstar.out
+exists .task
+stdout ''
+
+# Test: update match, run
+touch sub/dir/file_5
+rivet globstar
+exists file_globstar.out
+exists .task
+stdout 'Task globstar runs'
+stdout '-> file_1.txt'
+stdout '-> file_2.txt'
+stdout '-> sub/file_3'
+stdout '-> sub/dir/file_4'
+stdout '-> sub/dir/file_5'
+! stdout '-> foo_1.bar'
+
+# Test: update non match, run
+touch foo_1.bar
+rivet globstar
+exists file_globstar.out
+exists .task
+stdout ''
+
+
+-- Taskfile.yml --
+version: '3'
+
+tasks:
+  globstar:
+    cmds:
+      - echo "Task {{.TASK}} runs"
+      - for: sources
+        cmd: echo "-> {{.ITEM}}"
+      - touch file_{{.TASK}}.out
+    transforms:
+      - matches:
+          - ./**/*.txt 
+        yields:
+          - file_{{.TASK}}.out
+
+-- file_1.txt --
+-- file_2.txt --
+-- foo_1.bar --
+-- sub/file_3.txt --
+-- sub/foo_1.bar --
+-- sub/dir/file_4.txt --
+-- sub/dir/file_5.txt --
+-- sub/dir/foo_1.bar --

@@ -1,0 +1,49 @@
+env FILE=file
+
+# Test: expand match 
+rivet expand
+exists file_expand.out
+exists .task
+stdout 'Task expand runs'
+stdout '-> file_1.txt'
+stdout '-> file_2.txt'
+stdout '-> file 3.txt'
+ 
+# Test: no change, no run
+rivet expand
+exists file_expand.out
+exists .task
+stdout ''
+
+# Test: update match, run
+touch 'file 3.txt'
+rivet expand
+exists file_expand.out
+exists .task
+stdout 'Task expand runs'
+stdout '-> file_1.txt'
+stdout '-> file_2.txt'
+stdout '-> file 3.txt'
+ 
+
+-- Taskfile.yml --
+version: '3'
+
+tasks:
+  expand:
+    cmds:
+      - echo "Task {{.TASK}} runs"
+      - for: sources
+        cmd: echo "-> {{.ITEM}}"
+      - touch file_{{.TASK}}.out
+    transforms:
+      - matches:
+          - '{{.FILE}}_1.txt'
+          - '{{.USER_WORKING_DIR}}/file_2.txt' 
+          - file 3.txt  
+        yields:
+          - file_{{.TASK}}.out
+
+-- file_1.txt --
+-- file_2.txt --
+-- file 3.txt --

@@ -1,0 +1,53 @@
+
+# Test: wildcard match 
+rivet wildcard
+exists file_wildcard.out
+exists .task
+stdout 'Task wildcard runs'
+stdout '-> file_1.txt'
+stdout '-> file_2.txt'
+stdout '-> foo_1.txt'
+! stdout '-> foo_12.txt'
+ 
+# Test: no change, no run
+rivet wildcard
+exists file_wildcard.out
+exists .task
+stdout ''
+
+# Test: update match, run
+touch file_1.txt
+touch foo_1.txt
+rivet wildcard
+exists file_wildcard.out
+exists .task
+stdout 'Task wildcard runs'
+stdout '-> file_1.txt'
+stdout '-> file_2.txt'
+stdout '-> foo_1.txt'
+! stdout '-> foo_12.txt'
+
+
+-- Taskfile.yml --
+version: '3'
+
+tasks:
+  wildcard:
+    cmds:
+      - echo "Task {{.TASK}} runs"
+      - for: sources
+        cmd: echo "-> {{.ITEM}}"
+      - touch file_{{.TASK}}.out
+    transforms:
+      - matches:
+          - file_*.txt 
+          - foo_?.txt 
+        yields:
+          - file_{{.TASK}}.out
+
+-- file_1.txt --
+-- file_2.txt --
+-- foo_1.txt --
+-- foo_12.txt --
+-- sub/file_1.txt --
+-- sub/foo_1.txt --
