@@ -1,0 +1,44 @@
+
+# Test: special cases 
+rivet special
+exists file_special.out
+exists .task
+stdout 'Task special runs'
+stdout '-> .env'
+stdout '-> .e v'
+
+# Test: no change, no run
+rivet special
+exists file_special.out
+exists .task
+stdout ''
+
+# Test: update match, run
+touch '.env'
+rivet special
+exists file_special.out
+exists .task
+stdout 'Task special runs'
+stdout '-> .env'
+stdout '-> .e v'
+ 
+
+-- Taskfile.yml --
+version: '3'
+
+tasks:
+  special:
+    cmds:
+      - echo "Task {{.TASK}} runs"
+      - for: sources
+        cmd: echo "-> {{.ITEM}}"
+      - touch file_{{.TASK}}.out
+    transform:
+      matches:
+        - '.env'
+        - '.e v' 
+      yields:
+        - file_{{.TASK}}.out
+
+-- .env --
+-- .e v --

@@ -48,11 +48,11 @@ tasks:
       - for: sources
         cmd: echo "-> {{.ITEM}}"
       - touch file_{{.TASK}}.out
-    transforms:
-      - matches:
-          - ./**/*.txt 
-        yields:
-          - file_{{.TASK}}.out
+    transform:
+      matches:
+        - ./**/*.txt 
+      yields:
+        - file_{{.TASK}}.out
 
 -- file_1.txt --
 -- file_2.txt --

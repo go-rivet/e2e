@@ -56,7 +56,6 @@ tasks:
     sources:
       - 'watch.file'
       - exclude: 'watch.exclude'
-    method: none
   run:service:
     cmds:
       - './out/service'

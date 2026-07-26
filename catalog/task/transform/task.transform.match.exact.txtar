@@ -70,11 +70,11 @@ tasks:
       - for: sources
         cmd: echo "-> {{.ITEM}}"
       - touch file_exact.out
-    transforms:
-      - matches:
-          - file_1.text 
-        yields:
-          - file_exact.out
+    transform:
+      matches:
+        - file_1.text 
+      yields:
+        - file_exact.out
 
 -- file_1.txt --
 -- file_1.text --

@@ -1,0 +1,19 @@
+skip 'awaiting supporting implementation'
+
+tasks:
+  compile:
+    transform: %.c obj/%.o **/*
+    cmds:
+      - echo "Task {{.TASK}} runs"
+      - for: transform
+        cmd: gcc -c {{.MATCH}} -o {{.YIELD}}"
+  link:
+    transform:
+      matches:
+        - obj/**/*.o
+      yields:
+        - '{{.TASK}}.exe'
+    cmds:
+      - echo "Task {{.TASK}} runs"
+      - for: transform
+        cmd: gcc -c {{.MATCHES}} -o {{.YIELDS}}"
