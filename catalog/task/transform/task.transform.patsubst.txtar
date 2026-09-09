@@ -1,19 +1,88 @@
-skip 'awaiting supporting implementation'
+
+# Test: transform subst
+rm .task 
+rm *.new
+! exists file_1.new 
+! exists file_2.new 
+rivet subst
+exists file_1.new 
+exists file_2.new 
+exists .task 
+stdout 'Task subst runs'
+stdout 'file_1.old -> file_1.new'
+stdout 'file_2.old -> file_2.new'
+
+# Test: transform subst up-to-date
+rivet subst
+! stdout 'Task subst runs'
+! stdout 'file_1.old -> file_1.new'
+! stdout 'file_2.old -> file_2.new'
+
+# Test: transform subst out-of-date
+exec touch file_1.old
+exec sh -c 'echo "foo" > file_1.old'
+exec ls -al
+rivet subst
+exists .task 
+stdout 'Task subst runs'
+stdout 'file_1.old -> file_1.new'
+stdout 'file_2.old -> file_2.new'
+
+# Test: transform subst with force
+rivet --force subst
+exists .task 
+stdout 'Task subst runs'
+stdout 'file_1.old -> file_1.new'
+stdout 'file_2.old -> file_2.new'
+
+# Test: transform combined subst matches yields
+rm .task 
+rm *.new
+rm *.txt
+rivet combined
+exists file_1.new 
+exists file_2.new 
+exists fubar.txt 
+exists .task
+stdout 'Task combined runs'
+stdout 'file_1.old -> file_1.new'
+stdout 'file_2.old -> file_2.new'
+stdout 'file_3.foo ->>'
+stdout 'sub/file_4.foo ->>'
+stdout ' ->> fubar.txt'
+
+
+
+-- Taskfile.yml --
+version: '3'
 
 tasks:
-  compile:
-    transform: %.c obj/%.o **/*
-    cmds:
-      - echo "Task {{.TASK}} runs"
-      - for: transform
-        cmd: gcc -c {{.MATCH}} -o {{.YIELD}}"
-  link:
+  subst:
     transform:
-      matches:
-        - obj/**/*.o
-      yields:
-        - '{{.TASK}}.exe'
+      subst: '%.old:%.new'
+      #matches:
+      #  - '**/*.old'
     cmds:
       - echo "Task {{.TASK}} runs"
       - for: transform
-        cmd: gcc -c {{.MATCHES}} -o {{.YIELDS}}"
+        cmd: echo "{{.MATCH}} -> {{.YIELD}}"; cp {{.MATCH}} {{.YIELD}}
+  combined:
+    transform:
+      subst: '%.old:%.new'
+      matches:
+        - '**/*.foo' 
+      yields: 
+        - fubar.txt
+    cmds:
+      - echo "Task {{.TASK}} runs"
+      - for: transform
+        cmd: echo "{{.MATCH}} -> {{.YIELD}}"; cp {{.MATCH}} {{.YIELD}}
+      - for: matches
+        cmd: echo "{{.ITEM}} ->>" 
+      - for: yields
+        cmd: echo " ->> {{.ITEM}}"; touch {{.ITEM}}
+        
+-- file_1.old --
+-- file_2.old --
+-- file_3.foo --
+-- sub/file_4.foo --

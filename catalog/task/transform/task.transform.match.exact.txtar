@@ -67,7 +67,7 @@ tasks:
   default:
     cmds:
       - echo "Task {{.TASK}} runs"
-      - for: sources
+      - for: matches
         cmd: echo "-> {{.ITEM}}"
       - touch file_exact.out
     transform:

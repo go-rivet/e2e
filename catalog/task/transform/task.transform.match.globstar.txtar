@@ -6,10 +6,11 @@ exists .task
 stdout 'Task globstar runs'
 stdout '-> file_1.txt'
 stdout '-> file_2.txt'
-stdout '-> sub/file_3'
-stdout '-> sub/dir/file_4'
-stdout '-> sub/dir/file_5'
+stdout '-> sub/file_3.txt'
+stdout '-> sub/dir/file_4.txt'
+stdout '-> sub/dir/file_5.txt'
 ! stdout '-> foo_1.bar'
+! stdout '-> sub/dir/foo_1.bar'
  
 # Test: no change, no run
 rivet globstar
@@ -18,17 +19,18 @@ exists .task
 stdout ''
 
 # Test: update match, run
-touch sub/dir/file_5
+touch sub/dir/file_5.txt
 rivet globstar
 exists file_globstar.out
 exists .task
 stdout 'Task globstar runs'
 stdout '-> file_1.txt'
 stdout '-> file_2.txt'
-stdout '-> sub/file_3'
-stdout '-> sub/dir/file_4'
-stdout '-> sub/dir/file_5'
+stdout '-> sub/file_3.txt'
+stdout '-> sub/dir/file_4.txt'
+stdout '-> sub/dir/file_5.txt'
 ! stdout '-> foo_1.bar'
+! stdout '-> sub/dir/foo_1.bar'
 
 # Test: update non match, run
 touch foo_1.bar
@@ -45,7 +47,7 @@ tasks:
   globstar:
     cmds:
       - echo "Task {{.TASK}} runs"
-      - for: sources
+      - for: matches
         cmd: echo "-> {{.ITEM}}"
       - touch file_{{.TASK}}.out
     transform:

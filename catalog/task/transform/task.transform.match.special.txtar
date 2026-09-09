@@ -30,7 +30,7 @@ tasks:
   special:
     cmds:
       - echo "Task {{.TASK}} runs"
-      - for: sources
+      - for: matches
         cmd: echo "-> {{.ITEM}}"
       - touch file_{{.TASK}}.out
     transform:
