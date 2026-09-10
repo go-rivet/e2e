@@ -1,0 +1,102 @@
+# Test: otel trace/span relationships
+rivet -v --log otel task-a task-b
+cp stdout otel.log
+stdout 'shared-dep done'
+stdout 'shared-sub done'
+stdout 'task-a done'
+stdout 'task-b done'
+exec bash check-spans.sh otel.log
+
+-- Taskfile.yml --
+version: '3'
+
+tasks:
+  task-a:
+    deps: [shared-dep]
+    cmds:
+      - task: shared-sub
+      - echo "task-a done"
+
+  task-b:
+    deps: [shared-dep]
+    cmds:
+      - task: shared-sub
+      - echo "task-b done"
+
+  shared-dep:
+    cmds:
+      - echo "shared-dep done"
+
+  shared-sub:
+    cmds:
+      - echo "shared-sub done"
+
+-- check-spans.sh --
+# Verifies the trace/span relationships in a captured otel-format log
+# stream, without asserting on the literal (random) TraceID/SpanID values:
+#   - every "Task started" record shares the same TraceID
+#   - every SpanID is unique
+#   - shared-dep/shared-sub each ran once per caller (task-a and task-b),
+#     each time parented by that caller's own span
+set -euo pipefail
+
+file="$1"
+
+# One tab-separated line per "Task started" record: task, kind, span, parent, trace.
+records=$(awk '
+  /"Body":\{"Type":"STRING","Value":"Task started"\}/ {
+    task = kind = span = parent = trace = ""
+    if (match($0, /"TraceID":"[0-9a-f]+"/)) {
+      trace = substr($0, RSTART + 11, RLENGTH - 12)
+    }
+    if (match($0, /"SpanID":"[0-9a-f]+"/)) {
+      span = substr($0, RSTART + 10, RLENGTH - 11)
+    }
+    if (match($0, /"Key":"task","Value":\{"Type":"STRING","Value":"[^"]+"/)) {
+      s = substr($0, RSTART, RLENGTH); sub(/.*"Value":"/, "", s); sub(/"$/, "", s); task = s
+    }
+    if (match($0, /"Key":"kind","Value":\{"Type":"STRING","Value":"[^"]+"/)) {
+      s = substr($0, RSTART, RLENGTH); sub(/.*"Value":"/, "", s); sub(/"$/, "", s); kind = s
+    }
+    if (match($0, /"Key":"parent_span_id","Value":\{"Type":"STRING","Value":"[^"]+"/)) {
+      s = substr($0, RSTART, RLENGTH); sub(/.*"Value":"/, "", s); sub(/"$/, "", s); parent = s
+    }
+    print task "\t" kind "\t" span "\t" parent "\t" trace
+  }
+' "$file")
+
+fail() { echo "check-spans: $*" >&2; exit 1; }
+
+field() { echo "$records" | awk -F'\t' -v task="$1" -v kind="$2" '$1==task && $2==kind {print $3; exit}'; }
+count() { echo "$records" | awk -F'\t' -v task="$1" '$1==task' | wc -l | tr -d ' '; }
+parented_by() { # task kind parent_span_id
+  echo "$records" | awk -F'\t' -v task="$1" -v kind="$2" -v parent="$3" \
+    '$1==task && $2==kind && $4==parent { found=1 } END { exit !found }'
+}
+
+# All "Task started" records must share exactly one TraceID.
+n_traces=$(echo "$records" | cut -f5 | sort -u | wc -l | tr -d ' ')
+[ "$n_traces" -eq 1 ] || fail "expected exactly one distinct TraceID, found $n_traces"
+
+# Every SpanID must be unique (one line per record, one unique span per line).
+n_records=$(echo "$records" | wc -l | tr -d ' ')
+n_spans=$(echo "$records" | cut -f3 | sort -u | wc -l | tr -d ' ')
+[ "$n_records" -eq "$n_spans" ] || fail "found duplicate SpanID(s) among $n_records records"
+
+span_a=$(field task-a direct)
+span_b=$(field task-b direct)
+[ -n "$span_a" ] || fail "no root span found for task-a"
+[ -n "$span_b" ] || fail "no root span found for task-b"
+[ "$(count task-a)" -eq 1 ] || fail "expected task-a to run exactly once"
+[ "$(count task-b)" -eq 1 ] || fail "expected task-b to run exactly once"
+
+[ "$(count shared-dep)" -eq 2 ] || fail "expected shared-dep to run exactly twice (once per caller)"
+[ "$(count shared-sub)" -eq 2 ] || fail "expected shared-sub to run exactly twice (once per caller)"
+
+parented_by shared-dep dep "$span_a" || fail "shared-dep was not parented by task-a's span"
+parented_by shared-dep dep "$span_b" || fail "shared-dep was not parented by task-b's span"
+parented_by shared-sub cmd "$span_a" || fail "shared-sub was not parented by task-a's span"
+parented_by shared-sub cmd "$span_b" || fail "shared-sub was not parented by task-b's span"
+
+echo "check-spans: OK"
+
