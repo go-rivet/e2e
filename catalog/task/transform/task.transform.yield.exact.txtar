@@ -1,0 +1,53 @@
+
+# Test: exact match 
+rivet exact
+exists file_exact.out
+exists .task
+stdout 'Task exact runs'
+! stdout '-> file_1.txt'
+! stdout '-> file_2.txt'
+! stdout '-> foo_1.txt'
+stdout '-> file_exact.out'
+ 
+# Test: no change, no run
+rivet exact
+exists file_exact.out
+exists .task
+stdout ''
+
+# Test: update match, run
+touch file_1.txt
+touch foo_1.txt
+rivet exact
+exists file_exact.out
+exists .task
+stdout 'Task exact runs'
+! stdout '-> file_1.txt'
+! stdout '-> file_2.txt'
+! stdout '-> foo_1.txt'
+stdout '-> file_exact.out'
+
+
+-- Taskfile.yml --
+version: '3'
+
+tasks:
+  exact:
+    cmds:
+      - echo "Task {{.TASK}} runs"
+      - for: yields
+        cmd: echo "-> {{.ITEM}}"
+      - touch file_{{.TASK}}.out
+    transform:
+      matches:
+        - file_*.txt 
+        - foo_?.txt 
+      yields:
+        - file_{{.TASK}}.out
+
+-- file_1.txt --
+-- file_2.txt --
+-- foo_1.txt --
+-- foo_12.txt --
+-- sub/file_1.txt --
+-- sub/foo_1.txt --

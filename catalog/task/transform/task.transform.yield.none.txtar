@@ -1,0 +1,37 @@
+
+# Test: yield-none 
+rivet yield-none
+exists .task
+stdout 'Task yield-none runs'
+stdout '-> file_1.txt'
+stdout '-> file_2.txt'
+ 
+# Test: no change, no run
+rivet yield-none
+exists .task
+stdout ''
+
+# Test: update match, run
+touch file_1.txt
+rivet yield-none
+exists .task
+stdout 'Task yield-none runs'
+stdout '-> file_1.txt'
+stdout '-> file_2.txt'
+
+
+-- Taskfile.yml --
+version: '3'
+
+tasks:
+  yield-none:
+    cmds:
+      - echo "Task {{.TASK}} runs"
+      - for: matches
+        cmd: echo "-> {{.ITEM}}"
+    transform:
+      matches:
+        - file_*.txt 
+
+-- file_1.txt --
+-- file_2.txt --
