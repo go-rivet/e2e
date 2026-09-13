@@ -51,10 +51,12 @@ Hello World.
 -- stderr-verbose-info.txt --
 task: [default] echo "Hello World."
 -- stderr-verbose-debug.txt --
+Rivet operating conditions: envFile= entrypoint=
 task: "default" started
 task: [default] echo "Hello World."
 task: "default" finished
 -- stderr-verbose-trace.txt --
+Rivet operating conditions: envFile= entrypoint=
 task: "default" started
 task: [default] echo "Hello World."
 task: "default" finished
